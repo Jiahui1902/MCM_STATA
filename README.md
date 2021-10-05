@@ -8,7 +8,9 @@ Syntax --
 
 xi3: mcm luck143 e.paredef3\*e.red14ef3, origin(paredef3) destination(red14ef3)
 
-Note: *paredef3* is parents' educational level and *red14ef3* is respondent'd educational level
+Data Source: National Youth Longitudinal Study (1979 cohort)
+
+Note: *luck143* is the outcome variable representing the Rotter score collected in 2014. *paredef3* is parents' educational level and *red14ef3* is respondent'd educational level.
 
 ```text
 Estimates:

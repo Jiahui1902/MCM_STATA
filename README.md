@@ -17,7 +17,7 @@ r1           0   .05836619    .0782799
 r1  -.07455011           0  -.00852132
 r1   .14430869   .01139239           0
 
-Standard Errors: \n
+Standard Errors: 
 mobility_effect_se[3,3]
            r1         r2         r3
 c1          0  .05587926  .05622257

@@ -4,6 +4,8 @@ Implementing Mobility Contrast Model in STATA
 Luo, Liying. Forthcoming. “Heterogeneous Effects of Intergenerational Social Mobility: An Improved Method and New Evidence.” *American Sociological Review*
 
 # Example
+Syntax --
+
 xi3: mcm luck143 e.paredef3\*e.red14ef3, origin(paredef3) destination(red14ef3)
 
 Note: *paredef3* is parents' educational level and *red14ef3* is respondent'd educational level

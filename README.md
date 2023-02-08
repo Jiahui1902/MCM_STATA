@@ -6,7 +6,9 @@ Luo, Liying. "Heterogeneous effects of intergenerational social mobility: An imp
 # Example
 Syntax --
 
+```text
 xi3: mcm luck143 e.paredef3\*e.red14ef3, origin(paredef3) destination(red14ef3)
+```
 
 Data Source: National Youth Longitudinal Study (1979 cohort)
 

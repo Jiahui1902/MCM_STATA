@@ -940,8 +940,6 @@ end
 
 
 
-
-
 ***************************
 // MCM command 
 ***************************
@@ -959,139 +957,163 @@ local names: colnames coefficients
 local names: subinstr local names "_cons" "_CONS"
 mat coln coefficients = `names'
 
-preserve
-drop *
-svmat coefficients, names(col)
-mkmat _I*X*, mat(coefficients_int)
-restore
-
-
 * standard errors from model
 matrix stderr = e(V) /*variance-covariance matrix*/
 local names: colnames stderr
 local names: subinstr local names "_cons" "_CONS"
 mat coln stderr = `names'
-
-preserve
-drop *
-svmat stderr, names(col)
-mkmat _I*X*, mat(stderr_int)
-restore
-
-matrix stderr_int = stderr_int'
-mat coln stderr_int = `names'
-
-preserve
-drop *
-svmat stderr_int, names(col)
-mkmat _I*X*, mat(stderr_int)
-restore
-
-* finish step 1 with matrix manipulation
-* get design matrix
-tab `destination'
+quiet tab `destination'
 local d = `r(r)'
-tab `origin'
+quiet tab `origin'
 local o = `r(r)'
+matrix df_r = e(df_r)
+mata: df_r=st_matrix("df_r")
+***************************************************************
+// get the effects
+***************************************************************
+local end_mata end
 
-preserve
-keep _I*
-
-local v " "
-forvalues i = `d'(-1)2{
- local v "`v' _I`origin'_`i' "
-}
-forvalues i = `o'(-1)2{
- local v "`v' _I`destination'_`i' "
-}
-
-gsort "`v'"
-drop _I*_*
-
-duplicates drop
-egen nmis=rmiss(*)
-keep if nmis==0
-
-drop nmis 
-mkmat *, mat(X)
-restore
-
-
-// get estimates
-matrix step1_estmat = X*coefficients_int'
-
-// get standard errors
-matrix iavcov = X*stderr_int*X'
-matrix step1_semat = X*stderr_int*X'
-mata st_matrix("step1_semat",sqrt(diagonal(st_matrix("step1_semat"))))
-* confidence interval
-matrix ci_lower = step1_estmat-1.96*step1_semat
-matrix ci_upper = step1_estmat+1.96*step1_semat
-
-matrix step1_results = (step1_estmat,step1_semat,ci_lower,ci_upper)
-matrix colnames step1_results = "estimates" "std err" "ci_lower" "ci_upper"
-
-********************************
-// step 1 results: interacitions
-********************************
-matrix list step1_results
-
-********************************
-// step 2 results: mobility effect
-********************************
-mat A = I(`o')
-
-
-forvalues i=1/`o' {
-preserve
-mat zeros = 0*I(`o')
-drop *
-svmat zeros, names(col)
-replace c`i' = 1
-mkmat *, mat(B`i')
-matrix trans_matrix = A - B`i'
-matrix mobility_effect_`i' = trans_matrix*step1_estmat[(`i'-1)*`d'+1..`i'*`d',1]
-//matrix list mobility_effect_`i'
-
-matrix mobility_effect_se_`i' = trans_matrix*iavcov[(`i'-1)*`d'+1..`i'*`d',(`i'-1)*`d'+1..`i'*`d']*trans_matrix'
-mata st_matrix("mobility_effect_se_`i'",sqrt(diagonal(st_matrix("mobility_effect_se_`i'"))))
-restore
+local nm1 "Orig 1"
+forvalues i= 2/`o'{
+local nm1 "`nm1'" "Orig `i'"
 }
 
-
-matrix mobility_effect = mobility_effect_1
-forvalues i=2/`o' {
-matrix mobility_effect = (mobility_effect, mobility_effect_`i')
+local nm2 "Desti 1"
+forvalues i= 2/`d'{
+local nm2 "`nm2'" "Desti `i'"
 }
-matrix mobility_effect = mobility_effect'
 
-matrix mobility_effect_se = mobility_effect_se_1
-forvalues i=2/`o' {
-matrix mobility_effect_se = (mobility_effect_se, mobility_effect_se_`i')
+mata: o=`o'
+mata: d=`d'
+
+matrix coef_full=coefficients[1..1,1..`o'-1+`d'-1+(`o'-1)*(`d'-1)]
+mata: coef_full=st_matrix("coef_full")
+
+matrix stderr_full=stderr[1..`o'-1+`d'-1+(`o'-1)*(`d'-1),1..`o'-1+`d'-1+(`o'-1)*(`d'-1)]
+mata: stderr_full=st_matrix("stderr_full")
+
+mata: mcm_full = J(o+d+o*d,o-1+d-1+(o-1)*(d-1),0)
+mata:
+mcm_full[1,1..(o-1)]=J(1,(o-1),-1)
+mcm_full[1+o,o..(o-1+d-1)]=J(1,(d-1),-1)
+for (i=2; i<=o; i++) {
+mcm_full[i,i-1] = 1
+mcm_full[i+o,o-1+i-1] = 1
 }
-matrix mobility_effect_se = mobility_effect_se'
-matrix ci_lower = mobility_effect - 1.96*mobility_effect_se
-matrix ci_upper = mobility_effect + 1.96*mobility_effect_se
+`end_mata'
 
-matrix list mobility_effect
-matrix list mobility_effect_se
-matrix list ci_lower
-matrix list ci_upper
+mata:
+xxx=J(0,1,.)
+yyy=J(o*d,0,.)
+//c=2
+for (i=1;i<=d-1;i++){
+for (c=1;c<=o-1;c++){
+for (r=1; r<=o; r++) {
+xxx=(xxx\ mcm_full[r,i]*mcm_full[1..o,c])
+}
+yyy=(yyy,xxx)
+xxx=J(0,1,.)
+}
+}
+mcm_full[(o+d+1)..(o+d+o*d),(o+d-1)..(o-1 + d-1 + (o-1)*(d-1))]=yyy
+ `end_mata'
+
+mata: ests = mcm_full*coef_full'
+mata: ests_se = mcm_full*stderr_full'*mcm_full'
+***************************************************************
+******* origin's effect ***********
+***************************************************************
+mata:
+main=J(0,3,.)
+for (i=1;i<=o;i++){
+//main=(main\(ests[(i-1)*o+i,1],sqrt(diagonal(ests_se))[(i-1)*o+i,1]))
+main=(main\(ests[i,1],sqrt(diagonal(ests_se))[i,1] , 2 * ttail(df_r, abs(ests[i,1]/sqrt(diagonal(ests_se))[i,1])))  )
+}
+ `end_mata'
+
+mata: st_matrix("origin", main)
+mat rown origin = "`nm1'"
+mat coln origin = "estimates" "Std Err" "P>|t|"
+mat list origin
+***************************************************************
+******* destination's effect ***********
+***************************************************************
+mata:
+main=J(0,3,.)
+for (i=1;i<=o;i++){
+//main=(main\ests[i+d,1],sqrt(diagonal(ests_se))[i+d,1])
+main=(main\(ests[i+d,1],sqrt(diagonal(ests_se))[i+d,1] , 2 * ttail(df_r, abs(ests[i+d,1]/sqrt(diagonal(ests_se))[i+d,1])))  )
+}
+ `end_mata'
+mata: st_matrix("destination", main)
+mat rown destination = "`nm2'"
+mat coln destination = "estimates" "Std Err" "P>|t|"
+mat list destination
+***************************************************************
+******* immobile effect ***********
+***************************************************************
+mata:
+immo=J(o,o+d+o*d,0)
+for(i=1;i<=o;i++){
+immo[i,(i,i+o,o+d+o*(i-1)+i)]=(1,1,1)
+}
+immo=(immo*ests,sqrt(diagonal(immo*ests_se*immo')))
+immo_p=J(0,1,.)
+for(i=1;i<=o;i++){
+immo_p=(immo_p \ 2 * ttail(df_r, abs(immo[i,1]/immo[i,2])))
+}
+immo=(immo,immo_p)
+`end_mata'
+mata: st_matrix("immobility", immo)
+
+local nm_i "Orig 1 : Desti 1"
+forvalues i= 2/`d'{
+local nm_i "`nm_i'" "Orig `i' : Desti `i'"
+}
+
+mat rown immobility = "`nm_i'"
+mat coln immobility = "estimates" "Std Err" "P>|t|"
+mat list immobility
+***************************************************************
+******* mobility effect ***********
+***************************************************************
+mata:
+mob1=J(o*d,o+d+o*d,0)
+mob2=J(o*d,o+d+o*d,0)
+for(i=1;i<=o;i++){
+mob1[(i-1)*o+1..i*o,o+d+(i-1)*o+1..o+d+i*o] = I(o)
+}
+for(i=1;i<=o;i++){
+mob2[o*(i-1)+1..o*i,(o+d+o*(i-1)+i)]=J(o,1,-1)
+}
+mob=mob1+mob2
+mob=(mob*ests,sqrt(diagonal(mob*ests_se*mob')))
+mobility_effect=J(o,d,.)
+mobility_effect_se=J(o,d,.)
+mobility_effect_p=J(o,d,.)
+for(i=1;i<=o;i++){
+for(j=1;j<=o;j++){
+mobility_effect[i,j] = mob[d*(i-1)+j,1]
+mobility_effect_se[i,j] = mob[d*(i-1)+j,2]
+if(i!=j){
+mobility_effect_p[i,j] = (2 * ttail(df_r, abs(mobility_effect[i,j]/mobility_effect_se[i,j]))) 
+}
+}
+}
+`end_mata'
+
+mata: st_matrix("mobility_effect", mobility_effect)
+mata: st_matrix("mobility_effect_se", mobility_effect_se)
+mata: st_matrix("mobility_effect_p", mobility_effect_p)
+mat rown mobility_effect = "`nm1'"
+mat coln mobility_effect = "`nm2'"
+mat rown mobility_effect_se = "`nm1'"
+mat coln mobility_effect_se = "`nm2'"
+mat rown mobility_effect_p = "`nm1'"
+mat coln mobility_effect_p = "`nm2'"
+
+mat list mobility_effect
+mat list mobility_effect_se
+mat list mobility_effect_p
 
 end
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

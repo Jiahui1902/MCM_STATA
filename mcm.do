@@ -940,6 +940,10 @@ end
 
 
 
+
+
+
+
 ***************************
 // MCM command 
 ***************************
@@ -949,7 +953,7 @@ program define mcm
 	gettoken depvar indeps : varlist
 	
 	* run linear model
-	reg `depvar' `indeps'
+	//reg `depvar' `indeps'
 
 * estimates from model
 matrix coefficients = e(b) /*coefficients matrix*/ 
@@ -962,12 +966,15 @@ matrix stderr = e(V) /*variance-covariance matrix*/
 local names: colnames stderr
 local names: subinstr local names "_cons" "_CONS"
 mat coln stderr = `names'
+
 quiet tab `destination'
 local d = `r(r)'
 quiet tab `origin'
 local o = `r(r)'
-matrix df_r = e(df_r)
+//matrix df_r = e(df_r)
+matrix df_r = e(N)-e(df_m)-1
 mata: df_r=st_matrix("df_r")
+
 ***************************************************************
 // get the effects
 ***************************************************************
@@ -1042,6 +1049,7 @@ mata:
 main=J(0,3,.)
 for (i=1;i<=o;i++){
 //main=(main\ests[i+d,1],sqrt(diagonal(ests_se))[i+d,1])
+//(ests[i+d,1],sqrt(diagonal(ests_se))[i+d,1] , 2 * ttail(df_r, abs(ests[i+d,1]/sqrt(diagonal(ests_se))[i+d,1])))  
 main=(main\(ests[i+d,1],sqrt(diagonal(ests_se))[i+d,1] , 2 * ttail(df_r, abs(ests[i+d,1]/sqrt(diagonal(ests_se))[i+d,1])))  )
 }
  `end_mata'
@@ -1117,3 +1125,4 @@ mat list mobility_effect_se
 mat list mobility_effect_p
 
 end
+

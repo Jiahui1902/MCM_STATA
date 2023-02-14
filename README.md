@@ -3,7 +3,9 @@ Implementing Mobility Contrast Model (MCM) in STATA
 
 Luo, Liying. "Heterogeneous effects of intergenerational social mobility: An improved method and new evidence." *American Sociological Review* 87.1 (2022): 143-173.
 
-MCM model supports *generalized linear model*. All the models are under sum-to-zero coding, which means that the omitted coefficient for a categorical variable equals to the negative sum of all the other levels. It is possible to use `lincom` in STATA to recover the omitted coefficients after model estimation.
+MCM model supports *generalized linear model*. All the models are under sum-to-zero coding, which means that the omitted coefficient for a categorical variable equals to the negative sum of all the other levels. It is possible to use `lincom` in STATA to recover the omitted coefficients after model estimation (see below for examples using `lincom` instead of mcm).
+
+When applying *generalized linear models*, the generated effects are on the transformed scale instead of the natural scale. For example, in logistics regression, the generated effects are on the scale of log odds instead of probability. Please pay attention to the interpretation when reading the results.
 
 The below shows examples for linear models, linear models with weighting, linear models with clustering, and logitsitc regression models with MCM. 
 
@@ -118,6 +120,103 @@ lincom _Iparedef3_2+_Ired14ef3_2 + _Ipa2Xre2
 * origin == 3 & destination == 3
 lincom _Iparedef3_3+_Ired14ef3_3 + _Ipa3Xre3
 ```
+
+Output from `lincom`
+```text
+. lincom -_Iparedef3_2-_Iparedef3_3
+
+ ( 1)  - _Iparedef3_2 - _Iparedef3_3 = 0
+
+------------------------------------------------------------------------------
+     luck143 |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+         (1) |  -.0443443   .0156259    -2.84   0.005      -.07498   -.0137085
+------------------------------------------------------------------------------
+
+. lincom _Iparedef3_2
+
+ ( 1)  _Iparedef3_2 = 0
+
+------------------------------------------------------------------------------
+     luck143 |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+         (1) |   .0010803   .0167979     0.06   0.949    -.0318533    .0340139
+------------------------------------------------------------------------------
+
+. lincom _Iparedef3_3
+
+ ( 1)  _Iparedef3_3 = 0
+
+------------------------------------------------------------------------------
+     luck143 |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+         (1) |    .043264   .0259892     1.66   0.096    -.0076899    .0942178
+------------------------------------------------------------------------------
+
+. lincom -_Ired14ef3_2 -_Ired14ef3_3
+
+ ( 1)  - _Ired14ef3_2 - _Ired14ef3_3 = 0
+
+------------------------------------------------------------------------------
+     luck143 |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+         (1) |  -.0292639    .026755    -1.09   0.274    -.0817192    .0231914
+------------------------------------------------------------------------------
+
+. lincom _Ired14ef3_2
+
+ ( 1)  _Ired14ef3_2 = 0
+
+------------------------------------------------------------------------------
+     luck143 |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+         (1) |  -.0265313   .0157429    -1.69   0.092    -.0573965    .0043339
+------------------------------------------------------------------------------
+
+. lincom _Ired14ef3_3
+
+ ( 1)  _Ired14ef3_3 = 0
+
+------------------------------------------------------------------------------
+     luck143 |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+         (1) |   .0557952   .0154307     3.62   0.000     .0255422    .0860483
+------------------------------------------------------------------------------
+
+. * origin == 1 & destination == 1
+. lincom -_Iparedef3_2-_Iparedef3_3 - _Ired14ef3_2 - _Ired14ef3_3 + _Ipa2Xre2 + _Ipa2Xre3 + _Ipa3Xre2 + _Ipa3Xre3
+
+ ( 1)  - _Iparedef3_2 - _Iparedef3_3 - _Ired14ef3_2 - _Ired14ef3_3 + _Ipa2Xre2 + _Ipa2Xre3 + _Ipa3Xre2 + _Ipa3Xre3 = 0
+
+------------------------------------------------------------------------------
+     luck143 |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+         (1) |  -.1134624   .0247149    -4.59   0.000    -.1619179    -.065007
+------------------------------------------------------------------------------
+
+. * origin == 2 & destination == 2
+. lincom _Iparedef3_2+_Ired14ef3_2 + _Ipa2Xre2
+
+ ( 1)  _Iparedef3_2 + _Ired14ef3_2 + _Ipa2Xre2 = 0
+
+------------------------------------------------------------------------------
+     luck143 |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+         (1) |  -.0299254   .0196159    -1.53   0.127     -.068384    .0085331
+------------------------------------------------------------------------------
+
+. * origin == 3 & destination == 3
+. lincom _Iparedef3_3+_Ired14ef3_3 + _Ipa3Xre3
+
+ ( 1)  _Iparedef3_3 + _Ired14ef3_3 + _Ipa3Xre3 = 0
+
+------------------------------------------------------------------------------
+     luck143 |      Coef.   Std. Err.      t    P>|t|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+         (1) |   .0945974   .0203363     4.65   0.000     .0547265    .1344684
+------------------------------------------------------------------------------
+```
+
 
 # Example 2: linear model + weighting
 ```text

@@ -3,7 +3,7 @@ Implementing Mobility Contrast Model (MCM) in STATA
 
 Luo, Liying. "Heterogeneous effects of intergenerational social mobility: An improved method and new evidence." *American Sociological Review* 87.1 (2022): 143-173.
 
-MCM model supports *generalized linear model*. All the models are under sum-to-zero coding, which means that the omitted coefficient for a categorical variable equals to the negative sum of all the other levels. It is possible to use `lincom` in STATA to recover the omitted coefficients after model estimation (see below for examples using `lincom` instead of mcm).
+MCM model supports *generalized linear model*. All the models are under sum-to-zero coding, which means that the omitted coefficient for a categorical variable equals to the negative sum of all the other levels. It is possible to use `lincom` in STATA to recover the omitted coefficients after model estimation (see below for examples using `lincom` instead of `mcm`).
 
 When applying *generalized linear models*, the generated effects are on the transformed scale instead of the natural scale. For example, in logistics regression, the generated effects are on the scale of log odds instead of probability. Please pay attention to the interpretation when reading the results.
 
